@@ -14,8 +14,11 @@ import com.mongodb.Mongo;
 import com.reactivespring.controller.v1.ItemController;
 import com.reactivespring.document.Item;
 import com.reactivespring.document.ItemCapped;
+import com.reactivespring.document.Topology;
+import com.reactivespring.document.TopologyMoasicResponse;
 import com.reactivespring.repository.ItemReactiveCappedRepository;
 import com.reactivespring.repository.ItemReactiveRepository;
+import com.reactivespring.repository.TopologyRepository;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -33,6 +36,9 @@ public class ItemDataInitializer implements CommandLineRunner{
 	@Autowired
 	MongoOperations mongoOperations;
 	
+	@Autowired
+	private TopologyRepository topologyrepo;
+	
 	@Override
 	public void run(String... args) throws Exception {
 
@@ -40,9 +46,16 @@ public class ItemDataInitializer implements CommandLineRunner{
 		
 		createCappedCollections();
 		
-		dataSetupForCappedCollection();
+		//dataSetupForCappedCollection();
+		
+		dropTopology();
 	}
 	
+	private void dropTopology() {
+		mongoOperations.dropCollection(Topology.class);
+		
+	}
+
 	private void createCappedCollections() {
 
 		mongoOperations.dropCollection(ItemCapped.class);

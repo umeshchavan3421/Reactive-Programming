@@ -1,5 +1,8 @@
 package com.reactivespring.controller.v1;
 
+import java.time.Duration;
+import java.util.Objects;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +17,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reactivespring.document.Item;
+import com.reactivespring.document.Topology;
+import com.reactivespring.document.TopologyMoasicResponse;
 import com.reactivespring.repository.ItemReactiveRepository;
+import com.reactivespring.repository.TopologyRepository;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -27,6 +33,9 @@ public class ItemController {
 	@Autowired
 	private ItemReactiveRepository repository;
 	
+	@Autowired
+	private TopologyRepository topologyrepo;
+	
 	@ExceptionHandler(RuntimeException.class)
 	public ResponseEntity<String> handleRuntimeException(RuntimeException ex){
 		log.error("Exception caught: {}" +ex );
@@ -38,7 +47,7 @@ public class ItemController {
 	@GetMapping("/v1/items")
 	public Flux<Item> getAllItems(){
 		
-		return repository.findAll();
+		return repository.findAll().log();
 		
 	}
 	
@@ -89,5 +98,44 @@ public class ItemController {
 		
 	}
 	
+	
+	@GetMapping("/v1/populate")
+	public void populateData() throws InterruptedException{
+		
+		for(int i =0; i<=500 ; i++) {
+			
+			TopologyMoasicResponse mosaicresp = new TopologyMoasicResponse();
+			
+			mosaicresp.setSiteId("siteId" +i);
+			
+			mosaicresp.setCmtsName("cmts" +i);
+			
+			mosaicresp.setNodeName("node" +i);
+			
+			if(i == 100) {
+				Thread.sleep(5000);
+			}
+			
+			Flux<Topology> fluxOfTopology = Flux.just(mosaicresp)
+					.delayElements(Duration.ofSeconds(3))
+					.filter(Objects::nonNull).
+					filter(element -> null != element.getSiteId())
+					.map(mosaicTopology -> 
+					new Topology(mosaicTopology.getSiteId(), mosaicTopology.getCmtsName(), mosaicTopology.getNodeName()));
+			
+			topologyrepo.insert(fluxOfTopology)
+			.subscribe((itemcapped) -> {
+				log.info("Inserted item is:" +itemcapped);
+			});
+		}
+		
+	}
+	
+
+	@GetMapping("/v1/get")
+	public Flux<Topology> getData(){
+		return topologyrepo.findAll().log();
+		
+	}
 
 }
